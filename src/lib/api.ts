@@ -147,6 +147,11 @@ export const apiClient = new ApiClient(API_BASE_URL);
 export const api = apiClient.getAxiosInstance();
 
 export const apiEndpoints = {
+  auth: {
+    login: "/admin/auth/login",
+    logout: "/admin/auth/logout",
+    profile: "/admin/auth/profile",
+  },
   blogs: {
     getAll: "/admin/blogs",
     getById: (id: string) => `/admin/blogs/${id}`,

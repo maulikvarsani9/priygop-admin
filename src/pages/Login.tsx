@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi';
 import { useStore } from '../store/store';
 import { useNavigate } from 'react-router-dom';
@@ -10,9 +10,15 @@ import Button from '../components/ui/button';
 
 const Login: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
-    const { setUser, setToken } = useStore();
+    const { login, isAuthenticated } = useStore();
     const navigate = useNavigate();
     const { showError, showSuccess } = useToast();
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/dashboard');
+        }
+    }, [isAuthenticated, navigate]);
 
     const initialValues = {
         email: '',
@@ -21,12 +27,8 @@ const Login: React.FC = () => {
 
     const handleSubmit = async (values: typeof initialValues) => {
         try {
-            // For now, simple login without backend auth
-            // TODO: Implement actual authentication
-            setUser({ id: '1', name: 'Admin', email: values.email });
-            setToken('dummy-token');
-            showSuccess('Login Successful', 'Welcome back!');
-            navigate('/dashboard');
+            await login(values.email, values.password);
+            showSuccess('Login Successful', 'Welcome back! You have been logged in successfully.');
         } catch (err: unknown) {
             const errorMessage =
                 err instanceof Error && typeof err.message === 'string'
