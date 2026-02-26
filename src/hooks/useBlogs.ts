@@ -12,25 +12,29 @@ interface UseBlogsReturn {
     limit: number;
     pages: number;
   };
-  fetchBlogs: (page?: number, search?: string) => Promise<void>;
+  fetchBlogs: (page?: number, search?: string, status?: 'draft' | 'published' | 'archived') => Promise<void>;
   createBlog: (data: {
     title: string;
     content: string;
     mainImage: string;
     coverImage: string;
     author: string;
+    status?: 'draft' | 'published' | 'archived';
   }) => Promise<void>;
   updateBlog: (
     id: string,
     data: {
-      title: string;
-      content: string;
-      mainImage: string;
-      coverImage: string;
-      author: string;
+      title?: string;
+      content?: string;
+      mainImage?: string;
+      coverImage?: string;
+      author?: string;
+      status?: 'draft' | 'published' | 'archived';
     }
   ) => Promise<void>;
   deleteBlog: (id: string) => Promise<void>;
+  publishBlog: (id: string) => Promise<void>;
+  unpublishBlog: (id: string) => Promise<void>;
 }
 
 export const useBlogs = (): UseBlogsReturn => {
@@ -45,11 +49,11 @@ export const useBlogs = (): UseBlogsReturn => {
   });
   const hasFetched = useRef(false);
 
-  const fetchBlogs = useCallback(async (page = 1, search = "") => {
+  const fetchBlogs = useCallback(async (page = 1, search = "", status?: 'draft' | 'published' | 'archived') => {
     try {
       setLoading(true);
       setError(null);
-      const response = await blogsService.getBlogs({ page, limit: 10, search });
+      const response = await blogsService.getBlogs({ page, limit: 10, search, status });
       setBlogs(response.blogs);
       setPagination(response.pagination);
     } catch (err) {
@@ -69,6 +73,7 @@ export const useBlogs = (): UseBlogsReturn => {
       mainImage: string;
       coverImage: string;
       author: string;
+      status?: 'draft' | 'published' | 'archived';
     }) => {
       try {
         setLoading(true);
@@ -91,11 +96,12 @@ export const useBlogs = (): UseBlogsReturn => {
     async (
       id: string,
       data: {
-        title: string;
-        content: string;
-        mainImage: string;
-        coverImage: string;
-        author: string;
+        title?: string;
+        content?: string;
+        mainImage?: string;
+        coverImage?: string;
+        author?: string;
+        status?: 'draft' | 'published' | 'archived';
       }
     ) => {
       try {
@@ -134,6 +140,44 @@ export const useBlogs = (): UseBlogsReturn => {
     [pagination.page, fetchBlogs]
   );
 
+  const publishBlog = useCallback(
+    async (id: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await blogsService.publishBlog(id);
+        await fetchBlogs(pagination.page);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to publish blog";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pagination.page, fetchBlogs]
+  );
+
+  const unpublishBlog = useCallback(
+    async (id: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await blogsService.unpublishBlog(id);
+        await fetchBlogs(pagination.page);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to unpublish blog";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pagination.page, fetchBlogs]
+  );
+
   useEffect(() => {
     // Prevent double API call in React StrictMode
     if (!hasFetched.current) {
@@ -152,6 +196,8 @@ export const useBlogs = (): UseBlogsReturn => {
     createBlog,
     updateBlog,
     deleteBlog,
+    publishBlog,
+    unpublishBlog,
   };
 };
 

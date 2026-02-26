@@ -137,6 +137,13 @@ class ApiClient {
     });
   }
 
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PATCH",
+      data,
+    });
+  }
+
   getAxiosInstance() {
     return this.axiosInstance;
   }
@@ -158,6 +165,8 @@ export const apiEndpoints = {
     create: "/admin/blogs",
     update: (id: string) => `/admin/blogs/${id}`,
     delete: (id: string) => `/admin/blogs/${id}`,
+    publish: (id: string) => `/admin/blogs/${id}/publish`,
+    unpublish: (id: string) => `/admin/blogs/${id}/unpublish`,
   },
   authors: {
     getAll: "/admin/authors",

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiFileText } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiFileText, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useBlogs } from '../hooks/useBlogs';
 import { useToast } from '../contexts/ToastContext';
@@ -17,8 +17,9 @@ const BlogList: React.FC = () => {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'draft' | 'published' | 'archived' | ''>('');
 
-    const { blogs, loading, pagination, fetchBlogs, deleteBlog: deleteBlogMutation } = useBlogs();
+    const { blogs, loading, pagination, fetchBlogs, deleteBlog: deleteBlogMutation, publishBlog: publishBlogMutation, unpublishBlog: unpublishBlogMutation } = useBlogs();
     const { showSuccess, showError } = useToast();
 
     const handleDeleteClick = (blogId: string) => {
@@ -43,13 +44,51 @@ const BlogList: React.FC = () => {
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
-        fetchBlogs(page, searchQuery);
+        fetchBlogs(page, searchQuery, statusFilter || undefined);
     };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         setCurrentPage(1);
-        fetchBlogs(1, searchQuery);
+        fetchBlogs(1, searchQuery, statusFilter || undefined);
+    };
+
+    const handleStatusFilterChange = (status: 'draft' | 'published' | 'archived' | '') => {
+        setStatusFilter(status);
+        setCurrentPage(1);
+        fetchBlogs(1, searchQuery, status || undefined);
+    };
+
+    const handlePublish = async (blogId: string) => {
+        try {
+            await publishBlogMutation(blogId);
+            showSuccess('Success', 'Blog published successfully');
+        } catch (error) {
+            showError('Error', error instanceof Error ? error.message : 'Failed to publish blog');
+        }
+    };
+
+    const handleUnpublish = async (blogId: string) => {
+        try {
+            await unpublishBlogMutation(blogId);
+            showSuccess('Success', 'Blog unpublished successfully');
+        } catch (error) {
+            showError('Error', error instanceof Error ? error.message : 'Failed to unpublish blog');
+        }
+    };
+
+    const getStatusBadge = (status: 'draft' | 'published' | 'archived') => {
+        const statusConfig = {
+            draft: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Draft' },
+            published: { bg: 'bg-green-100', text: 'text-green-800', label: 'Published' },
+            archived: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Archived' },
+        };
+        const config = statusConfig[status];
+        return (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+                {config.label}
+            </span>
+        );
     };
 
     const truncateText = (text: string, maxLength: number) => {
@@ -89,6 +128,23 @@ const BlogList: React.FC = () => {
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent"
                         />
+                        <div className="relative">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => handleStatusFilterChange(e.target.value as 'draft' | 'published' | 'archived' | '')}
+                                className="appearance-none bg-white px-4 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent cursor-pointer min-w-[160px] text-gray-700 font-medium hover:border-gray-400"
+                            >
+                                <option value="">All Status</option>
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
                         <Button type="submit" className="bg-[#10b981] hover:bg-[#059669] whitespace-nowrap">
                             Search
                         </Button>
@@ -134,6 +190,9 @@ const BlogList: React.FC = () => {
                                         Author
                                     </th>
                                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Created
                                     </th>
                                     <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -176,6 +235,9 @@ const BlogList: React.FC = () => {
                                             </span>
                                         </td>
                                         <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                                            {getStatusBadge(blog.status || 'draft')}
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-900">
                                                 {new Date(blog.createdAt).toLocaleDateString()}
                                             </div>
@@ -185,6 +247,30 @@ const BlogList: React.FC = () => {
                                         </td>
                                         <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex justify-end gap-2">
+                                                {(blog.status === 'draft' || !blog.status) && (
+                                                    <Button
+                                                        onClick={() => handlePublish(blog._id)}
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-green-600 hover:text-green-900 hover:bg-green-50"
+                                                        aria-label="Publish blog"
+                                                        title="Publish"
+                                                    >
+                                                        <FiCheckCircle className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                                {blog.status === 'published' && (
+                                                    <Button
+                                                        onClick={() => handleUnpublish(blog._id)}
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50"
+                                                        aria-label="Unpublish blog"
+                                                        title="Unpublish"
+                                                    >
+                                                        <FiXCircle className="w-4 h-4" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     onClick={() => navigate(`/blogs/edit/${blog._id}`)}
                                                     variant="ghost"

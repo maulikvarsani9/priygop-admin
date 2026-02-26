@@ -36,6 +36,8 @@ export interface Blog {
     name: string;
     image?: string;
   };
+  status?: 'draft' | 'published' | 'archived';
+  publishedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

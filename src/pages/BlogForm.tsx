@@ -18,6 +18,7 @@ const blogSchema = Yup.object().shape({
     title: Yup.string().min(5, 'Title must be at least 5 characters').max(200).required('Title is required'),
     content: Yup.string().min(50, 'Content must be at least 50 characters').required('Content is required'),
     author: Yup.string().required('Author is required'),
+    status: Yup.string().oneOf(['draft', 'published', 'archived'], 'Invalid status').optional(),
 });
 
 const countWords = (text: string): number => {
@@ -53,6 +54,7 @@ const BlogForm: React.FC = () => {
         title: '',
         content: '',
         author: '',
+        status: 'draft' as 'draft' | 'published' | 'archived',
     });
 
     const hasLoadedAuthors = useRef(false);
@@ -90,6 +92,7 @@ const BlogForm: React.FC = () => {
                     title: blog.title,
                     content: blog.content,
                     author: typeof blog.author === 'object' ? (blog.author as any)._id : blog.author,
+                    status: (blog.status || 'draft') as 'draft' | 'published' | 'archived',
                 });
 
                 setMainImageUrl(blog.mainImage);
@@ -124,7 +127,7 @@ const BlogForm: React.FC = () => {
         }
     };
 
-    const handleSubmit = async (values: { title: string; content: string; author: string }) => {
+    const handleSubmit = async (values: { title: string; content: string; author: string; status?: 'draft' | 'published' | 'archived' }) => {
         try {
             if (!mainImageUrl || !coverImageUrl) {
                 showError('Error', 'Please upload both main and cover images');
@@ -137,6 +140,7 @@ const BlogForm: React.FC = () => {
                 mainImage: mainImageUrl,
                 coverImage: coverImageUrl,
                 author: values.author,
+                status: values.status || 'draft',
             };
 
             if (isEditMode) {
@@ -198,31 +202,57 @@ const BlogForm: React.FC = () => {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="mb-2 block text-sm font-medium">
-                            Author <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            name="author"
-                            value={formik.values.author}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            className={`w-full rounded-lg border px-4 py-2 ${
-                                formik.errors.author && formik.touched.author
-                                    ? 'border-red-500'
-                                    : 'border-gray-300'
-                            } focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent`}
-                        >
-                            <option value="">Select an author</option>
-                            {authors.map((author) => (
-                                <option key={author._id} value={author._id}>
-                                    {author.name}
-                                </option>
-                            ))}
-                        </select>
-                        {formik.errors.author && formik.touched.author && (
-                            <p className="mt-1 text-sm text-red-600">{formik.errors.author}</p>
-                        )}
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label className="mb-2 block text-sm font-medium">
+                                Author <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="author"
+                                value={formik.values.author}
+                                onChange={formik.handleChange}
+                                onBlur={formik.handleBlur}
+                                className={`w-full rounded-lg border px-4 py-2 ${
+                                    formik.errors.author && formik.touched.author
+                                        ? 'border-red-500'
+                                        : 'border-gray-300'
+                                } focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent`}
+                            >
+                                <option value="">Select an author</option>
+                                {authors.map((author) => (
+                                    <option key={author._id} value={author._id}>
+                                        {author.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {formik.errors.author && formik.touched.author && (
+                                <p className="mt-1 text-sm text-red-600">{formik.errors.author}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="mb-2 block text-sm font-medium">
+                                Status
+                            </label>
+                            <select
+                                name="status"
+                                value={formik.values.status}
+                                onChange={formik.handleChange}
+                                onBlur={formik.handleBlur}
+                                className={`w-full rounded-lg border px-4 py-2 ${
+                                    formik.errors.status && formik.touched.status
+                                        ? 'border-red-500'
+                                        : 'border-gray-300'
+                                } focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent`}
+                            >
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                            {formik.errors.status && formik.touched.status && (
+                                <p className="mt-1 text-sm text-red-600">{formik.errors.status}</p>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
